@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ticbruh-jpg@dev ~ </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --green:      #00FF41;
+      --dim:        #007A1F;
+      --neon:       #39FF14;
+      --border:     #003B00;
+      --bg:         #000000;
+      --glow:       0 0 8px #00FF41;
+      --glow-hard:  0 0 14px #39FF14, 0 0 28px #00FF41;
+    }
+
+    html {
+      background: #000;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'VT323', monospace;
+      font-size: 18px;
+      background: var(--bg);
+      color: var(--green);
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ── CRT wrapper ── */
+    #crt {
+      position: relative;
+      width: 100%;
+      max-width: 1100px;
+      min-height: calc(100vh - 40px);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow:
+        0 0 0 1px #001200,
+        0 0 30px rgba(0,255,65,0.10),
+        0 0 80px rgba(0,255,65,0.05),
+        inset 0 0 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: flicker 8s infinite;
+    }
+
+    /* scanlines */
+    #crt::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+      border-radius: 6px;
+    }
+
+    @keyframes flicker {
+      0%,  19%,  21%,  23%,  25%, 100% { opacity: 1; }
+      20%                               { opacity: 0.92; }
+      22%                               { opacity: 0.95; }
+      24%                               { opacity: 0.88; }
+    }
+
+    /* ── title bar ── */
+    #titlebar {
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 4px 12px;
+      font-size: 15px;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    /* ── layout ── */
+    #layout {
+      display: flex;
+      flex: 1;
+    }
+
+    /* ── sidebar ── */
+    #sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      position: sticky;
+      top: 0;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 0 16px 20px;
+      color: var(--neon);
+      text-shadow: var(--glow-hard);
+      font-size: 17px;
+      line-height: 1.4;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    #sidebar-header span {
+      display: block;
+      font-size: 13px;
+      color: var(--dim);
+      text-shadow: none;
+      margin-top: 4px;
+    }
+
+    nav {
+      flex: 1;
+      padding: 0 8px;
+    }
+
+    nav a {
+      display: block;
+      padding: 8px 10px;
+      color: var(--dim);
+      text-decoration: none;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      transition: color 0.1s, text-shadow 0.1s;
+      position: relative;
+    }
+
+    nav a::before {
+      content: '  ';
+      display: inline-block;
+      width: 20px;
+      transition: color 0.1s;
+    }
+
+    nav a.active {
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+
+    nav a.active::before {
+      content: '> ';
+      color: var(--neon);
+      text-shadow: var(--glow-hard);
+    }
+
+    nav a:hover {
+      color: var(--neon);
+      text-shadow: var(--glow-hard);
+    }
+
+    #sidebar-status {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 15px;
+      color: var(--dim);
+    }
+
+    #sidebar-status .status-dot {
+      color: var(--neon);
+      text-shadow: var(--glow-hard);
+      animation: blink-dot 2s step-end infinite;
+    }
+
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    /* ── main content ── */
+    #main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px 36px 60px;
+    }
+
+    /* ── sections ── */
+    .section {
+      margin-bottom: 56px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .section.visible {
+      opacity: 1;
+    }
+
+    .prompt {
+      color: var(--dim);
+      font-size: 20px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .prompt .user {
+      color: var(--neon);
+      text-shadow: var(--glow);
+    }
+
+    .prompt .cmd {
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+
+    /* ── WHOAMI ── */
+    .whoami-name {
+      font-size: 32px;
+      color: var(--neon);
+      text-shadow: var(--glow-hard);
+      letter-spacing: 0.05em;
+    }
+
+    .whoami-title {
+      font-size: 22px;
+      color: var(--dim);
+      margin: 4px 0 16px;
+    }
+
+    .whoami-bio {
+      font-size: 20px;
+      color: var(--green);
+      text-shadow: var(--glow);
+      max-width: 620px;
+      line-height: 1.5;
+      border-left: 2px solid var(--border);
+      padding-left: 14px;
+      margin-bottom: 24px;
+    }
+
+    .skills-label {
+      color: var(--dim);
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+
+    .skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .skill-tag {
+      border: 1px solid var(--border);
+      color: var(--green);
+      text-shadow: var(--glow);
+      padding: 2px 10px;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      transition: border-color 0.15s, text-shadow 0.15s;
+    }
+
+    .skill-tag:hover {
+      border-color: var(--neon);
+      text-shadow: var(--glow-hard);
+    }
+
+    /* ── PROJECTS ── */
+    .ls-header {
+      color: var(--dim);
+      font-size: 17px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+
+    .ls-row {
+      display: grid;
+      grid-template-columns: 140px 190px 1fr;
+      gap: 0 14px;
+      align-items: baseline;
+      padding: 6px 0;
+      border-bottom: 1px solid #001200;
+      font-size: 19px;
+      line-height: 1.4;
+    }
+
+    .ls-row:hover {
+      background: rgba(0,255,65,0.03);
+    }
+
+    .ls-perms {
+      color: var(--dim);
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .ls-name a {
+      color: var(--neon);
+      text-shadow: var(--glow);
+      text-decoration: none;
+      transition: text-shadow 0.15s;
+    }
+
+    .ls-name a:hover {
+      text-shadow: var(--glow-hard);
+      text-decoration: underline;
+    }
+
+    .ls-desc {
+      color: var(--green);
+      font-size: 17px;
+    }
+
+    /* ── GITHUB ── */
+    .curl-output {
+      border: 1px solid var(--border);
+      padding: 20px;
+      max-width: 540px;
+    }
+
+    .curl-output a {
+      color: var(--neon);
+      text-shadow: var(--glow);
+      text-decoration: none;
+      font-size: 22px;
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .curl-output a:hover {
+      text-shadow: var(--glow-hard);
+    }
+
+    .gh-stats {
+      display: block;
+      max-width: 100%;
+      border: 1px solid var(--border);
+      margin-top: 12px;
+      filter: saturate(1.1);
+    }
+
+    .gh-caption {
+      color: var(--dim);
+      font-size: 15px;
+      margin-top: 6px;
+    }
+
+    /* ── BLOG ── */
+    .blog-line {
+      padding: 7px 0;
+      border-bottom: 1px solid #001200;
+      font-size: 19px;
+      display: flex;
+      gap: 20px;
+      align-items: baseline;
+    }
+
+    .blog-date {
+      color: var(--dim);
+      flex-shrink: 0;
+      font-size: 17px;
+    }
+
+    .blog-line a {
+      color: var(--green);
+      text-shadow: var(--glow);
+      text-decoration: none;
+      transition: text-shadow 0.15s, color 0.15s;
+    }
+
+    .blog-line a:hover {
+      color: var(--neon);
+      text-shadow: var(--glow-hard);
+    }
+
+    /* ── CONTACT ── */
+    .finger-output {
+      font-size: 19px;
+    }
+
+    .finger-row {
+      display: grid;
+      grid-template-columns: 100px 16px 1fr;
+      padding: 6px 0;
+      border-bottom: 1px solid #001200;
+      gap: 0 8px;
+      align-items: baseline;
+    }
+
+    .finger-key {
+      color: var(--dim);
+    }
+
+    .finger-sep {
+      color: var(--border);
+    }
+
+    .finger-val {
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+
+    .finger-val a {
+      color: var(--neon);
+      text-shadow: var(--glow);
+      text-decoration: none;
+    }
+
+    .finger-val a:hover {
+      text-shadow: var(--glow-hard);
+    }
+
+    /* ── cursor ── */
+    .cursor {
+      display: inline-block;
+      width: 11px;
+      height: 1.1em;
+      background: var(--green);
+      box-shadow: var(--glow);
+      vertical-align: text-bottom;
+      animation: blink-cursor 1.1s step-end infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink-cursor {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    /* ── nav flash on click ── */
+    .section.flash {
+      animation: nav-flash 0.25s ease-out;
+    }
+
+    @keyframes nav-flash {
+      0%   { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+
+    /* ── scrollbar ── */
+    #main::-webkit-scrollbar       { width: 6px; }
+    #main::-webkit-scrollbar-track { background: #000; }
+    #main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── mobile ── */
+    @media (max-width: 700px) {
+      body { padding: 0; }
+
+      #crt {
+        border-radius: 0;
+        min-height: 100vh;
+      }
+
+      #layout { flex-direction: column; }
+
+      #sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 12px 0 8px;
+      }
+
+      #sidebar-header { display: none; }
+
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 0 10px;
+      }
+
+      nav a { font-size: 18px; padding: 4px 8px; }
+
+      #sidebar-status { display: none; }
+
+      #main { padding: 20px 16px 40px; }
+
+      .ls-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+
+      .ls-desc { padding-left: 4px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="crt">
+  <div id="titlebar">bash — Ticbruh-jpg@dev:~ — 80×24</div>
+
+  <div id="layout">
+
+    <!-- ── sidebar ── -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        [Ticbruh-jpg@dev ~]$<br>
+        <span>/ portfolio v1.0</span>
+      </div>
+
+      <nav id="nav">
+        <a href="#whoami"   class="nav-link active" data-target="whoami">WHOAMI</a>
+        <a href="#projects" class="nav-link"         data-target="projects">PROJECTS</a>
+        <a href="#github"   class="nav-link"         data-target="github">GITHUB</a>
+        <a href="#blog"     class="nav-link"         data-target="blog">BLOG</a>
+        <a href="#contact"  class="nav-link"         data-target="contact">CONTACT</a>
+      </nav>
+
+      <div id="sidebar-status">
+        <span class="status-dot">●</span> CONN: ESTABLISHED<br>
+        <span style="color:#004A00;font-size:14px;">uptime: <span id="uptime">00:00:00</span></span>
+      </div>
+    </aside>
+
+    <!-- ── main ── -->
+    <main id="main">
+
+      <!-- WHOAMI -->
+      <section class="section" id="whoami">
+        <div class="prompt">
+          <span class="user">Ticbruh-jpg@dev</span>
+          <span style="color:var(--border)">~</span>
+          <span>$</span>
+          <span class="cmd">whoami</span>
+        </div>
+
+        <div class="whoami-name">Josip <span style="color:var(--dim);font-size:22px;">// Ticbruh-jpg</span></div>
+        <div class="whoami-title">Systems Tinkerer / Python &amp; C Developer</div>
+
+        <div class="whoami-bio">
+          "Self-taught developer with a taste for low-level systems and automation.
+          By day I push bytes, by night I build things that shouldn't exist.
+          Linux native. Fedora + Hyprland."
+        </div>
+
+        <div class="skills-label">$ echo $SKILLS</div>
+        <div class="skills">
+          <span class="skill-tag">Python</span>
+          <span class="skill-tag">C</span>
+          <span class="skill-tag">Rust (learning)</span>
+          <span class="skill-tag">Linux</span>
+          <span class="skill-tag">Bash</span>
+          <span class="skill-tag">Git</span>
+          <span class="skill-tag">HTML/CSS/JS</span>
+          <span class="skill-tag">SQL</span>
+        </div>
+        <span class="cursor" id="cursor-whoami"></span>
+      </section>
+
+      <!-- PROJECTS -->
+      <section class="section" id="projects">
+        <div class="prompt">
+          <span class="user">Ticbruh-jpg@dev</span>
+          <span style="color:var(--border)">~</span>
+          <span>$</span>
+          <span class="cmd">ls -la ./projects</span>
+        </div>
+
+        <div class="ls-header">total 4</div>
+
+        <div class="ls-row">
+          <span class="ls-perms">drwxr-xr-x</span>
+          <span class="ls-name">
+            <a href="https://github.com/Ticbruh-jpg/weather_app" target="_blank" rel="noopener">weather-app/</a>
+          </span>
+          <span class="ls-desc">Python GUI weather app with live forecast data</span>
+        </div>
+
+        <div class="ls-row">
+          <span class="ls-perms">-rw-r--r--</span>
+          <span class="ls-name">
+            <a href="https://github.com/Ticbruh-jpg" target="_blank" rel="noopener">discord-bot.py</a>
+          </span>
+          <span class="ls-desc">Discord bot with custom commands</span>
+        </div>
+
+        <div class="ls-row">
+          <span class="ls-perms">-rw-r--r--</span>
+          <span class="ls-name">
+            <a href="https://github.com/Ticbruh-jpg" target="_blank" rel="noopener">memory-game.c</a>
+          </span>
+          <span class="ls-desc">Terminal memory game written in C</span>
+        </div>
+
+        <div class="ls-row">
+          <span class="ls-perms">-rw-r--r--</span>
+          <span class="ls-name">
+            <a href="https://github.com/Ticbruh-jpg" target="_blank" rel="noopener">job-scraper.py</a>
+          </span>
+          <span class="ls-desc">Automated job search → Google Sheets pipeline</span>
+        </div>
+      </section>
+
+      <!-- GITHUB -->
+      <section class="section" id="github">
+        <div class="prompt">
+          <span class="user">Ticbruh-jpg@dev</span>
+          <span style="color:var(--border)">~</span>
+          <span>$</span>
+          <span class="cmd">curl github.com/Ticbruh-jpg</span>
+        </div>
+
+        <div class="curl-output">
+          <a href="https://github.com/Ticbruh-jpg" target="_blank" rel="noopener">
+            → github.com/Ticbruh-jpg
+          </a>
+          <img
+            class="gh-stats"
+            src="https://github-readme-stats.vercel.app/api?username=Ticbruh-jpg&theme=dark&bg_color=000000&title_color=00FF41&text_color=00FF41&icon_color=39FF14&border_color=003B00&hide_border=false"
+            alt="Ticbruh-jpg GitHub stats"
+            loading="lazy"
+          />
+          <div class="gh-caption">// fetched via github-readme-stats.vercel.app</div>
+        </div>
+      </section>
+
+      <!-- BLOG -->
+      <section class="section" id="blog">
+        <div class="prompt">
+          <span class="user">Ticbruh-jpg@dev</span>
+          <span style="color:var(--border)">~</span>
+          <span>$</span>
+          <span class="cmd">ls ./blog | sort -r</span>
+        </div>
+
+        <div class="blog-line">
+          <span class="blog-date">2026-03-01</span>
+          <a href="#">setting-up-hyprland-on-fedora.txt</a>
+        </div>
+        <div class="blog-line">
+          <span class="blog-date">2026-01-14</span>
+          <a href="#">writing-a-terminal-game-in-c-from-scratch.txt</a>
+        </div>
+        <div class="blog-line">
+          <span class="blog-date">2025-11-28</span>
+          <a href="#">automating-my-job-hunt-with-python.txt</a>
+        </div>
+      </section>
+
+      <!-- CONTACT -->
+      <section class="section" id="contact">
+        <div class="prompt">
+          <span class="user">Ticbruh-jpg@dev</span>
+          <span style="color:var(--border)">~</span>
+          <span>$</span>
+          <span class="cmd">finger Ticbruh-jpg@dev</span>
+        </div>
+
+        <div class="finger-output">
+          <div class="finger-row">
+            <span class="finger-key">Login</span>
+            <span class="finger-sep">:</span>
+            <span class="finger-val">Ticbruh-jpg</span>
+          </div>
+          <div class="finger-row">
+            <span class="finger-key">Name</span>
+            <span class="finger-sep">:</span>
+            <span class="finger-val">Josip</span>
+          </div>
+          <div class="finger-row">
+            <span class="finger-key">github</span>
+            <span class="finger-sep">:</span>
+            <span class="finger-val">
+              <a href="https://github.com/Ticbruh-jpg" target="_blank" rel="noopener">https://github.com/Ticbruh-jpg</a>
+            </span>
+          </div>
+          <div class="finger-row">
+            <span class="finger-key">status</span>
+            <span class="finger-sep">:</span>
+            <span class="finger-val" style="color:var(--neon);text-shadow:var(--glow);">open to freelance projects</span>
+          </div>
+          <div class="finger-row">
+            <span class="finger-key">stack</span>
+            <span class="finger-sep">:</span>
+            <span class="finger-val">Python, C, Linux, Bash</span>
+          </div>
+          <div class="finger-row">
+            <span class="finger-key">shell</span>
+            <span class="finger-sep">:</span>
+            <span class="finger-val">/bin/bash (Fedora + Hyprland)</span>
+          </div>
+        </div>
+        <br>
+        <span class="cursor"></span>
+      </section>
+
+    </main>
+  </div><!-- /layout -->
+</div><!-- /crt -->
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── uptime counter ── */
+  const start = Date.now();
+  function padZ(n) { return String(n).padStart(2, '0'); }
+  function tick() {
+    const s = Math.floor((Date.now() - start) / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const el = document.getElementById('uptime');
+    if (el) el.textContent = padZ(h) + ':' + padZ(m) + ':' + padZ(sec);
+  }
+  setInterval(tick, 1000);
+
+  /* ── typewriter on WHOAMI bio ── */
+  const bio = document.querySelector('.whoami-bio');
+  const originalText = bio.textContent.trim();
+  bio.textContent = '';
+  bio.style.borderLeftColor = 'transparent';
+
+  let charIdx = 0;
+  let typingDone = false;
+
+  function typeChar() {
+    if (charIdx < originalText.length) {
+      bio.textContent += originalText[charIdx++];
+      setTimeout(typeChar, 28 + Math.random() * 14);
+    } else {
+      typingDone = true;
+      bio.style.borderLeftColor = 'var(--border)';
+    }
+  }
+
+  /* ── reveal sections ── */
+  const sections = Array.from(document.querySelectorAll('.section'));
+
+  function revealAll() {
+    sections.forEach((s, i) => {
+      setTimeout(() => s.classList.add('visible'), i * 120);
+    });
+  }
+
+  // Short delay then reveal + start typing
+  setTimeout(() => {
+    revealAll();
+    // tiny extra delay so the bio div is visible first
+    setTimeout(typeChar, 200);
+  }, 300);
+
+  /* ── nav active state + scroll ── */
+  const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      const targetId = this.dataset.target;
+      const target = document.getElementById(targetId);
+      if (!target) return;
+
+      // update active
+      navLinks.forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+
+      // flash effect
+      target.classList.remove('flash');
+      void target.offsetWidth; // reflow
+      target.classList.add('flash');
+
+      // scroll
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  /* ── scroll spy ── */
+  const mainEl = document.getElementById('main');
+
+  function onScroll() {
+    let current = sections[0].id;
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      if (rect.top <= 120) current = sec.id;
+    });
+    navLinks.forEach(l => {
+      l.classList.toggle('active', l.dataset.target === current);
+    });
+  }
+
+  mainEl.addEventListener('scroll', onScroll, { passive: true });
+
+})();
+</script>
+</body>
+</html>
